@@ -1,40 +1,59 @@
 import { motion } from "framer-motion";
-import BackButton from "../components/BackButton";
+import { useState } from "react";
 
 export default function MyAccount() {
+  const [name, setName] = useState("Hariom Acharya");
+  const [email, setEmail] = useState("hariom@example.com");
+  const [phone, setPhone] = useState("9876543210");
+
   return (
-    <div className="p-8 ml-64 mt-16">
-      <BackButton />
+    <div className="ml-64 mt-20 p-10">
 
       <motion.h1
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-4xl font-bold mb-6 text-purple-700"
+        className="text-4xl font-bold mb-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
       >
         My Account
       </motion.h1>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-6 rounded-xl shadow max-w-xl"
+        className="backdrop-blur-xl bg-white/40 border border-white/60 p-8 rounded-3xl shadow-xl max-w-xl"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
       >
-        <div className="flex items-center gap-6 mb-6">
-          <div className="w-24 h-24 bg-gray-200 rounded-full"></div>
-          <div>
-            <h2 className="text-2xl font-bold">Hariom Acharya</h2>
-            <p className="text-gray-600">Admin / Machine Learning Engineer</p>
-          </div>
-        </div>
+        {/* NAME */}
+        <label className="font-medium text-gray-700">Name</label>
+        <input
+          className="w-full p-3 mt-1 rounded-xl border"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
-        <div className="space-y-4">
-          <p className="text-gray-700">Email: hariom@example.com</p>
-          <p className="text-gray-700">Role: System Administrator</p>
-          <button className="mt-4 px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600">
-            Logout
-          </button>
-        </div>
+        {/* EMAIL */}
+        <label className="font-medium text-gray-700 mt-4 block">Email</label>
+        <input
+          className="w-full p-3 mt-1 rounded-xl border"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        {/* PHONE */}
+        <label className="font-medium text-gray-700 mt-4 block">Phone</label>
+        <input
+          className="w-full p-3 mt-1 rounded-xl border"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+
+        <motion.button
+          className="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
+          whileTap={{ scale: 0.95 }}
+        >
+          Save Changes
+        </motion.button>
       </motion.div>
+
     </div>
   );
 }

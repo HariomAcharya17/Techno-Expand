@@ -1,62 +1,46 @@
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
+import { FaTachometerAlt, FaCogs, FaInfoCircle, FaUsers, FaUserCircle } from "react-icons/fa";
 
 export default function Sidebar() {
-  const menu = [
-    { name: "Dashboard", path: "/dashboard" },
-    { name: "Machines", path: "/machines" },
-    { name: "Our Mission", path: "/our-mission" },
-    { name: "Our Approach", path: "/our-approach" },
-    { name: "Future Uses", path: "/future-uses" },
-    { name: "Our Team", path: "/our-team" },
-    { name: "My Account", path: "/my-account" },
+  const links = [
+    { to: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
+    { to: "/machines", label: "Machines", icon: <FaCogs /> },
+    { to: "/our-mission", label: "Our Mission", icon: <FaInfoCircle /> },
+    { to: "/our-approach", label: "Our Approach", icon: <FaCogs /> },
+    { to: "/future-uses", label: "Future Uses", icon: <FaCogs /> },
+    { to: "/our-team", label: "Our Team", icon: <FaUsers /> },
+    { to: "/my-account", label: "My Account", icon: <FaUserCircle /> },
   ];
 
   return (
-    <motion.div
-      initial={{ x: -50, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="w-64 h-screen bg-white shadow-xl fixed left-0 top-0 p-6 flex flex-col"
-    >
-      {/* Logo / Title */}
-      <motion.h1
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="text-3xl font-extrabold mb-10 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"
-      >
-        Techno Expand
-      </motion.h1>
+    <div className="fixed top-0 left-0 w-64 h-full bg-white/20 backdrop-blur-xl border-r shadow-xl p-6 flex flex-col">
+      <h1 className="text-3xl font-bold text-blue-600 mb-10">TechnoExpand</h1>
 
-      {/* Menu Items */}
-      <div className="space-y-2">
-        {menu.map((item, index) => (
+      <nav className="space-y-3">
+        {links.map((link, index) => (
           <motion.div
-            key={item.path}
-            initial={{ opacity: 0, x: -15 }}
+            key={index}
+            initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.05 * index }}
+            transition={{ delay: index * 0.1 }}
           >
             <NavLink
-              to={item.path}
+              to={link.to}
               className={({ isActive }) =>
-                `block px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200
-                ${
+                `flex items-center gap-3 p-3 rounded-xl transition ${
                   isActive
-                    ? "bg-blue-600 text-white shadow-lg"
-                    : "text-gray-700 hover:bg-gray-200 hover:shadow"
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "text-gray-700 hover:bg-blue-100"
                 }`
               }
             >
-              {item.name}
+              <span className="text-xl">{link.icon}</span>
+              {link.label}
             </NavLink>
           </motion.div>
         ))}
-      </div>
-
-      {/* Bottom Glow Effect */}
-      <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-blue-100 opacity-30 pointer-events-none"></div>
-    </motion.div>
+      </nav>
+    </div>
   );
 }
