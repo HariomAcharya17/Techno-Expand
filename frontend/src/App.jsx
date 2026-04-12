@@ -15,6 +15,11 @@ import FutureUses from "./pages/FutureUses";
 import OurTeam from "./pages/OurTeam";
 import MyAccount from "./pages/MyAccount";
 
+// Auth
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 function AnimatedRoutes() {
   const location = useLocation();
 
@@ -28,15 +33,21 @@ function AnimatedRoutes() {
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <Routes location={location} key={location.pathname}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/machines" element={<Machines />} />
-          <Route path="/machine/:id" element={<MachineDetails />} />
+          {/* Public */}
+          <Route path="/" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
-          <Route path="/our-mission" element={<OurMission />} />
-          <Route path="/our-approach" element={<OurApproach />} />
-          <Route path="/future-uses" element={<FutureUses />} />
-          <Route path="/our-team" element={<OurTeam />} />
-          <Route path="/my-account" element={<MyAccount />} />
+          {/* Protected */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/machines" element={<Machines />} />
+            <Route path="/machine/:id" element={<MachineDetails />} />
+            <Route path="/our-mission" element={<OurMission />} />
+            <Route path="/our-approach" element={<OurApproach />} />
+            <Route path="/future-uses" element={<FutureUses />} />
+            <Route path="/our-team" element={<OurTeam />} />
+            <Route path="/my-account" element={<MyAccount />} />
+          </Route>
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -46,9 +57,24 @@ function AnimatedRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Sidebar />
-      <Navbar />
-      <AnimatedRoutes />
+      <PageLayoutWrapper>
+        <AnimatedRoutes />
+      </PageLayoutWrapper>
     </BrowserRouter>
+  );
+}
+
+// ⭐ Layout wrapper that can use useLocation()
+function PageLayoutWrapper({ children }) {
+  const location = useLocation();
+  const noLayout =
+    location.pathname === "/" || location.pathname === "/signup";
+
+  return (
+    <>
+      {!noLayout && <Sidebar />}
+      {!noLayout && <Navbar />}
+      {children}
+    </>
   );
 }

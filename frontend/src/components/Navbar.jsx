@@ -1,7 +1,8 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate(); // ⭐ ADDED FOR LOGOUT REDIRECT
 
   // Titles for each page
   const titles = {
@@ -15,6 +16,12 @@ export default function Navbar() {
   };
 
   const pageTitle = titles[location.pathname] || "";
+
+  // ⭐ PROPER LOGOUT FUNCTION
+  const handleLogout = () => {
+    localStorage.removeItem("user");   // Delete user
+    navigate("/");                     // Redirect to Login
+  };
 
   return (
     <div
@@ -31,21 +38,21 @@ export default function Navbar() {
         {pageTitle}
       </h1>
 
-      {/* Logout Button — ONLY on Dashboard */}
-      {["/", "/dashboard"].includes(location.pathname) && (
-  <button
-    onClick={() => alert('Logged Out Successfully!')}
-    className="
-      px-4 py-2 rounded-lg text-white text-sm 
-      bg-gradient-to-r from-red-500 to-red-600 
-      shadow-lg shadow-red-300/40
-      hover:shadow-red-500/60 hover:scale-105 
-      transition-all duration-300
-    "
-  >
-    Logout
-  </button>
-)}
+      {/* Logout Button — ONLY when logged in */}
+      {location.pathname !== "/" && location.pathname !== "/signup" && (
+        <button
+          onClick={handleLogout} // ⭐ FIXED — THIS IS THE CORRECT LINE
+          className="
+            px-4 py-2 rounded-lg text-white text-sm 
+            bg-gradient-to-r from-red-500 to-red-600 
+            shadow-lg shadow-red-300/40
+            hover:shadow-red-500/60 hover:scale-105 
+            transition-all duration-300
+          "
+        >
+          Logout
+        </button>
+      )}
     </div>
   );
 }

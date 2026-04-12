@@ -70,9 +70,6 @@ export default function MachineDetails() {
     );
   }
 
-  // ============================================================
-  //  EXPORT EXCEL
-  // ============================================================
   const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
 
@@ -109,9 +106,6 @@ export default function MachineDetails() {
     Fail: "bg-red-500 shadow-red-300",
   };
 
-  // ============================================================
-  //  RETURN UI
-  // ============================================================
   return (
     <motion.div
       className="ml-64 mt-20 p-10"
@@ -145,6 +139,23 @@ export default function MachineDetails() {
           {data.condition}
         </motion.div>
       </div>
+
+      {/* ======================================================
+          ⚠ HUMAN ERROR CHECK MESSAGE (ONLY FOR FAILED MACHINE)
+      ======================================================= */}
+      {data.condition === "Fail" && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-xl shadow">
+          ⚠️ Before proceeding with maintenance, please first check:
+          <ul className="list-disc ml-6 mt-2 text-sm">
+            <li>Power supply connection</li>
+            <li>Main switch status</li>
+            <li>Cable wiring integrity</li>
+            <li>Loose connectors</li>
+          </ul>
+        </div>
+      )}
+
+      {/* REST OF YOUR UI REMAINS EXACTLY SAME BELOW */}
 
       {/* ======================================================
           SUMMARY + GRAPH
