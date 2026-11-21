@@ -3,7 +3,7 @@ import { PageHeader } from "../components/ui";
 
 // Add real profile URLs here; icons only show when a URL is set.
 const TEAM = [
-  { name: "Hariom Acharya", role: "Web Developer & ML Data Engineer", img: "/team/hariom.jpg", linkedin: "", github: "" },
+  { name: "Hariom Acharya", role: "Project Lead · Web Developer & ML Data Engineer", img: "/team/hariom.jpg", linkedin: "", github: "" },
   { name: "Kaushik Dalvi", role: "UI/UX Designer & Hardware Support", img: "/team/kaushik.jpg", linkedin: "", github: "" },
   { name: "Divya Balchandani", role: "Machine Learning Engineer", img: "/team/divya.jpg", linkedin: "", github: "" },
   { name: "Vraj Bagadiya", role: "UI Helper & Resource Management", img: "/team/vraj.jpg", linkedin: "", github: "" },
