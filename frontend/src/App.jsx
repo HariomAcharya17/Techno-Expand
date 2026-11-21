@@ -1,80 +1,37 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import "./lib/chart";
 
-import Sidebar from "./components/Sidebar";
-import Navbar from "./components/Navbar";
-
+import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Machines from "./pages/Machines";
 import MachineDetails from "./pages/MachineDetails";
-
-import OurMission from "./pages/OurMission";
-import OurApproach from "./pages/OurApproach";
-import FutureUses from "./pages/FutureUses";
+import Alerts from "./pages/Alerts";
+import Dataset from "./pages/Dataset";
+import CaseStudy from "./pages/CaseStudy";
+import Architecture from "./pages/Architecture";
 import OurTeam from "./pages/OurTeam";
-import MyAccount from "./pages/MyAccount";
-
-// Auth
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ProtectedRoute from "./components/ProtectedRoute";
-
-function AnimatedRoutes() {
-  const location = useLocation();
-
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        <Routes location={location} key={location.pathname}>
-          {/* Public */}
-          <Route path="/" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-
-          {/* Protected */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/machines" element={<Machines />} />
-            <Route path="/machine/:id" element={<MachineDetails />} />
-            <Route path="/our-mission" element={<OurMission />} />
-            <Route path="/our-approach" element={<OurApproach />} />
-            <Route path="/future-uses" element={<FutureUses />} />
-            <Route path="/our-team" element={<OurTeam />} />
-            <Route path="/my-account" element={<MyAccount />} />
-          </Route>
-        </Routes>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <PageLayoutWrapper>
-        <AnimatedRoutes />
-      </PageLayoutWrapper>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/machines" element={<Machines />} />
+          <Route path="/machine/:id" element={<MachineDetails />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/case-study" element={<CaseStudy />} />
+          <Route path="/dataset" element={<Dataset />} />
+          <Route path="/architecture" element={<Architecture />} />
+          <Route path="/our-team" element={<OurTeam />} />
+          {/* old routes */}
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
+          <Route path="/our-mission" element={<Navigate to="/architecture" replace />} />
+          <Route path="/our-approach" element={<Navigate to="/architecture" replace />} />
+          <Route path="/future-uses" element={<Navigate to="/architecture" replace />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
-  );
-}
-
-// ⭐ Layout wrapper that can use useLocation()
-function PageLayoutWrapper({ children }) {
-  const location = useLocation();
-  const noLayout =
-    location.pathname === "/" || location.pathname === "/signup";
-
-  return (
-    <>
-      {!noLayout && <Sidebar />}
-      {!noLayout && <Navbar />}
-      {children}
-    </>
   );
 }

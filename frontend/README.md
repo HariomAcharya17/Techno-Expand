@@ -1,16 +1,23 @@
-# React + Vite
+# TechnoExpand — Frontend (live demo)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+IoT-based predictive maintenance dashboard: ML machine-failure detection and Remaining Useful Life (RUL) for 15 industrial assets.
 
-Currently, two official plugins are available:
+This build runs fully in the browser. A simulator (`src/sim/`) produces the same live stream the
+original FastAPI WebSocket backend (`../backend/main.py`) sent, so the site can be hosted as a static site.
+The training dataset is not included: it is too large, and the Vercel free tier lagged when it was bundled.
+See the in-app **Dataset & Model** page.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Run locally
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Deploy on Vercel
 
-## Expanding the ESLint configuration
+1. Import the repository in Vercel.
+2. Set **Root Directory** to `frontend`.
+3. Framework preset: Vite (build `npm run build`, output `dist`).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+`vercel.json` rewrites all routes to `index.html` so deep links such as `/machine/M6` work on refresh.
