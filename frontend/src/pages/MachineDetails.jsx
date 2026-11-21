@@ -140,7 +140,9 @@ export default function MachineDetails() {
         <Kpi label="Failure probability" value={m.failure.toFixed(1)} unit="%" tone={m.status === "ok" ? undefined : m.status} />
         <Kpi label="Remaining useful life" value={m.rul.toFixed(1)} unit="days" tone={m.status} />
         <Kpi label="Operating hours" value={Math.round(m.workingHours).toLocaleString()} unit="h" />
-        <Kpi label="Next service" value={m.nextService} sub={`Last: ${m.lastChecked}`} />
+        <div className="col-span-2 md:col-span-1">
+          <Kpi label="Next service" value={m.nextService} sub={`Last: ${m.lastChecked}`} />
+        </div>
       </div>
 
       {/* Trend + alarms */}
@@ -219,7 +221,7 @@ export default function MachineDetails() {
 
       {/* Maintenance */}
       <Panel title="Maintenance log" className="mt-6" pad={false} action={<FiTool className="text-dim" size={14} />}>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-mute bg-panel-2">
@@ -241,6 +243,18 @@ export default function MachineDetails() {
             </tbody>
           </table>
         </div>
+        <ul className="divide-y divide-line md:hidden">
+          {m.maintenanceHistory.map((h, i) => (
+            <li key={i} className="px-4 py-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-medium">{h.event}</span>
+                <span className="num shrink-0 text-xs text-mute">{h.date}</span>
+              </div>
+              <div className="mt-0.5 text-xs text-dim">{h.engineer}</div>
+              <p className="mt-1 text-[13px] text-mute">{h.notes}</p>
+            </li>
+          ))}
+        </ul>
       </Panel>
     </>
   );

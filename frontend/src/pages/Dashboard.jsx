@@ -133,7 +133,7 @@ export default function Dashboard() {
             </Link>
           }
         >
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-mute">
@@ -180,6 +180,42 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+          <ul className="divide-y divide-line lg:hidden">
+            {sorted.map((m) => (
+              <li key={m.id}>
+                <Link to={`/machine/${m.id}`} className="block px-4 py-3 active:bg-panel-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-ink">{m.name}</div>
+                      <div className="num text-[11px] text-dim">
+                        {m.id} · {m.line}
+                      </div>
+                    </div>
+                    <StatusBadge status={m.status} condition={m.condition} />
+                  </div>
+                  <div className="mt-2">
+                    <HealthBar value={m.health} status={m.status} />
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-dim">
+                    <div>
+                      RUL
+                      <div className="num text-xs" style={{ color: m.status === "ok" ? undefined : STATUS_COLOR[m.status] }}>
+                        {m.rul.toFixed(1)} d
+                      </div>
+                    </div>
+                    <div>
+                      Temp
+                      <div><SensorCell k="temperature" v={m.sensor.temperature} /></div>
+                    </div>
+                    <div>
+                      Vibration
+                      <div><SensorCell k="vibration" v={m.sensor.vibration} /></div>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </Panel>
 
         <Panel

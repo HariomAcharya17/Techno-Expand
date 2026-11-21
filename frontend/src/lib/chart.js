@@ -38,7 +38,10 @@ export function lineOptions({ min, max, unit = "" } = {}) {
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { maxTicksLimit: 6, maxRotation: 0 } },
+      x: {
+        grid: { display: false },
+        ticks: { maxTicksLimit: typeof window !== "undefined" && window.innerWidth < 640 ? 3 : 6, maxRotation: 0, autoSkipPadding: 16 },
+      },
       y: { min, max, grid: { color: "#edf0f3" }, ticks: { maxTicksLimit: 5, callback: (v) => v + unit } },
     },
     elements: { point: { radius: 0, hoverRadius: 3 } },

@@ -28,14 +28,14 @@ function Confusion({ labels, matrix }) {
         <tr>
           <th className="p-1.5 text-left font-normal text-dim">actual \ predicted</th>
           {labels.map((l) => (
-            <th key={l} className="p-1.5 font-medium text-mute">{l}</th>
+            <th key={l} className="whitespace-nowrap p-1.5 font-medium text-mute">{l}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {matrix.map((row, i) => (
           <tr key={i}>
-            <th className="p-1.5 text-left font-medium text-mute">{labels[i]}</th>
+            <th className="whitespace-nowrap p-1.5 text-left font-medium text-mute">{labels[i]}</th>
             {row.map((v, j) => {
               const a = v === 0 ? 0 : 0.08 + 0.5 * Math.log1p(v) / Math.log1p(max);
               const diag = i === j;

@@ -53,7 +53,7 @@ export default function Alerts() {
       </div>
 
       <Panel pad={false}>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-mute bg-panel-2">
@@ -109,6 +109,43 @@ export default function Alerts() {
             </tbody>
           </table>
         </div>
+        <ul className="divide-y divide-line md:hidden">
+          {rows.map((a) => {
+            const def = SENSOR_BY_KEY[a.sensor];
+            return (
+              <li key={a.id} className={`px-4 py-3 ${a.acked ? "opacity-50" : ""}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: STATUS_COLOR[a.severity] }} />
+                      <span className="font-medium" style={{ color: STATUS_COLOR[a.severity] }}>
+                        {a.severity === "crit" ? "Critical" : "Warning"}
+                      </span>
+                      <span className="text-ink">{def.label}</span>
+                    </div>
+                    <Link to={`/machine/${a.machineId}`} className="mt-0.5 block truncate text-xs text-mute">
+                      {a.machineId} · {a.machine}
+                    </Link>
+                  </div>
+                  <span className="num shrink-0 text-xs">
+                    {a.value} <span className="text-dim">{def.unit}</span>
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <span className="num text-[11px] text-dim">{fmt(a.ts)}</span>
+                  {a.acked ? (
+                    <span className="text-xs text-dim">Acknowledged</span>
+                  ) : (
+                    <button onClick={() => acknowledge([a.id])} className="py-1 text-xs text-accent">
+                      Acknowledge
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+          {rows.length === 0 && <li className="px-4 py-8 text-center text-mute">No alarms.</li>}
+        </ul>
       </Panel>
     </>
   );
