@@ -127,6 +127,19 @@ const rocOptions = {
   },
 };
 
+const FLAWS = [
+  ["Fake “Medium” label", "Medium meant “row average of the 9 metrics above its overall average”. metric1 is in the hundreds of millions, so this was just a threshold on metric1. The model learned that rule (99.6% of its decisions) instead of signs of wear.", "Labels come from real failures: “fails within the next 7 days”, plus days until failure for RUL."],
+  ["Accuracy as the only score", "With 0.085% failures, predicting “no failure” every time already gives 99.9%. The notebook reported 99.9% while catching 0 of 18 failures.", "Recall, precision, F1, ROC-AUC and PR-AUC for the failure class, plus failing machines caught, warning time and false alarms."],
+  ["Same machine in train and test", "Rows were split at random, so a machine's other days were in training. The test score looked better than it would on a new machine.", "Split by machine (60% train, 20% validation, 20% test). Test machines are never seen in training."],
+  ["Test data leaked into scaling", "StandardScaler was fitted on all rows before the split, so test values shaped training.", "Nothing is fitted on test data. The tree model needs no scaler."],
+  ["Imbalance ignored", "With so few failures and no weighting, the model never predicted Fail at all.", "Class-weighted training, so each failure row counts much more."],
+  ["Default 0.5 cut-off", "One fixed threshold, never tuned, never checked on held-out data.", "Two thresholds tuned on validation machines: Warning ≥ 8%, Critical ≥ 80% risk."],
+  ["Each day judged alone", "The data is a daily history per machine, but the model saw one day's reading at a time.", "90 features from each machine's history: change since yesterday, 3/7/14-day averages and peaks, variability, drift since its first day."],
+  ["Duplicate input", "metric7 and metric8 are identical in every row.", "metric8 dropped."],
+  ["Health % and RUL were random", "predict.py picked a random health value in a range for each class; RUL was not modelled.", "Health % = 100 − predicted risk. RUL comes from a separate regression model (11.2 days average error near failure)."],
+  ["No model comparison, weak check", "One model, no comparison; the sample prediction used a row the model had trained on.", "HistGradientBoosting compared with Random Forest on validation PR-AUC; all results and demos use unseen test machines."],
+];
+
 export default function CaseStudy() {
   const r = ORIG.randomSplit;
   const g = ORIG.deviceSplit;
@@ -250,6 +263,45 @@ export default function CaseStudy() {
             classes for its Healthy, Warning and Critical states.
           </p>
         </div>
+      </Panel>
+
+      <h2 className="mb-2 mt-6 text-base font-semibold">Flaws in the first model, and how model v2 fixed them</h2>
+      <Panel pad={false}>
+        <div className="hidden md:block">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="bg-panel-2 text-left text-xs text-mute">
+                <th className="w-[18%] px-4 py-2 font-medium">Flaw / loophole</th>
+                <th className="w-[44%] px-4 py-2 font-medium">Why it was a problem</th>
+                <th className="px-4 py-2 font-medium">What model v2 does instead</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FLAWS.map(([flaw, why, fix], i) => (
+                <tr key={flaw} className="border-t border-line align-top">
+                  <td className="px-4 py-3 font-medium text-ink">
+                    <span className="num mr-2 text-dim">{String(i + 1).padStart(2, "0")}</span>
+                    {flaw}
+                  </td>
+                  <td className="px-4 py-3 leading-relaxed text-mute">{why}</td>
+                  <td className="px-4 py-3 leading-relaxed text-ink">{fix}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <ol className="divide-y divide-line md:hidden">
+          {FLAWS.map(([flaw, why, fix], i) => (
+            <li key={flaw} className="px-4 py-3 text-[13px] leading-relaxed">
+              <div className="font-medium text-ink">
+                <span className="num mr-2 text-dim">{String(i + 1).padStart(2, "0")}</span>
+                {flaw}
+              </div>
+              <p className="mt-1 text-mute"><span className="text-xs text-dim">Problem: </span>{why}</p>
+              <p className="mt-1 text-ink"><span className="text-xs text-dim">Fix: </span>{fix}</p>
+            </li>
+          ))}
+        </ol>
       </Panel>
 
       <h2 className="mb-2 mt-6 text-base font-semibold">Model v2: failure within 7 days, health and remaining useful life</h2>
