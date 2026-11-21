@@ -1,83 +1,116 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { FiSearch } from "react-icons/fi";
+import { useTelemetry } from "../sim/engine";
+import { MACHINES, SENSOR_BY_KEY, sensorState } from "../sim/config";
+import { StatusBadge, HealthBar, Sparkline, PageHeader } from "../components/ui";
+import { STATUS_COLOR } from "../lib/status";
 
-export default function Machines() {
-  const [machines, setMachines] = useState({});
+const FILTERS = [
+  ["all", "All"],
+  ["ok", "Healthy"],
+  ["warn", "Warning"],
+  ["crit", "Critical"],
+];
 
-  useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws/data");
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setMachines(data);
-    };
-
-    ws.onopen = () => console.log("Machines WS connected");
-
-    return () => {
-      if (ws.readyState === 1) ws.close(1000);
-    };
-  }, []);
-
-  const statusColor = {
-    Healthy: "bg-green-500",
-    Medium: "bg-yellow-500",
-    Fail: "bg-red-500",
-  };
-
+function Metric({ k, v }) {
+  const def = SENSOR_BY_KEY[k];
+  const st = sensorState(def, v);
   return (
-    <div className="ml-64 mt-20 p-10">
-      <h1 className="text-4xl font-bold">Machines</h1>
-
-      <div className="grid grid-cols-3 gap-8 mt-10">
-        {Object.entries(machines).map(([id, m], index) => (
-          <motion.div
-            key={id}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.05 }}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Link
-              to={`/machine/${id}`}
-              className="block bg-white p-6 rounded-2xl shadow-lg border 
-                       hover:shadow-2xl transition-all duration-300"
-            >
-              {/* MACHINE IMAGE */}
-              <div className="w-full h-40 rounded-xl overflow-hidden mb-4 bg-gray-100">
-                <img
-  src={`/machines/${id}.jpg`}
-  alt={m.name}
-  className="w-full h-full object-cover"
-  onError={(e) => (e.target.src = "/machines/default.jpg")}
-/>
-              </div>
-
-              {/* MACHINE NAME */}
-              <h2 className="text-xl font-semibold">{m.name}</h2>
-
-              {/* CONDITION BADGE */}
-              <div className="mt-2">
-                <span
-                  className={`text-white px-3 py-1 rounded-full text-sm ${statusColor[m.condition]}`}
-                >
-                  {m.condition}
-                </span>
-              </div>
-
-              {/* DETAILS */}
-              <div className="mt-4 text-gray-700 space-y-1">
-                <p><strong>Health:</strong> {m.health}%</p>
-                <p><strong>Failure %:</strong> {m.failure}%</p>
-                <p><strong>Working Hours:</strong> {m.workingHours}</p>
-                <p><strong>Next Service:</strong> {m.next_service}</p>
-              </div>
-            </Link>
-          </motion.div>
-        ))}
+    <div>
+      <div className="text-[10px] text-dim">{def.label}</div>
+      <div className="num text-sm" style={{ color: st === "ok" ? undefined : STATUS_COLOR[st] }}>
+        {v.toFixed(1)} <span className="text-dim text-xs">{def.unit}</span>
       </div>
     </div>
+  );
+}
+
+export default function Machines() {
+  const t = useTelemetry();
+  const [filter, setFilter] = useState("all");
+  const [q, setQ] = useState("");
+
+  const list = MACHINES.map((m) => t.machines[m.id]).filter(
+    (m) =>
+      (filter === "all" || m.status === filter) &&
+      (q === "" || `${m.id} ${m.name} ${m.line} ${m.area}`.toLowerCase().includes(q.toLowerCase()))
+  );
+
+  return (
+    <>
+      <PageHeader title="Assets" subtitle="Every asset carries one ESP32 sensor node streaming 9 channels." />
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex rounded border border-line bg-panel p-0.5">
+          {FILTERS.map(([k, l]) => (
+            <button
+              key={k}
+              onClick={() => setFilter(k)}
+              className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+                filter === k ? "bg-accent text-white" : "text-mute hover:text-ink"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <label className="relative sm:ml-auto sm:w-72">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" size={14} />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search asset, line, area"
+            className="w-full rounded border border-line bg-panel py-2 pl-9 pr-3 text-sm text-ink placeholder:text-dim focus:border-accent/60 focus:outline-none"
+          />
+        </label>
+      </div>
+
+      {list.length === 0 && <p className="text-sm text-mute">No assets match.</p>}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {list.map((m) => (
+          <Link
+            key={m.id}
+            to={`/machine/${m.id}`}
+            className="group overflow-hidden rounded border border-line bg-panel transition-colors hover:border-accent/40"
+          >
+            <div className="h-32 border-b border-line bg-panel-2">
+              <img
+                src={`/machines/${m.id}.jpg`}
+                alt={m.name}
+                loading="lazy"
+                className="h-full w-full object-cover"
+                onError={(e) => (e.currentTarget.style.display = "none")}
+              />
+            </div>
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="truncate font-medium text-ink">{m.name}</h3>
+                  <p className="num text-[11px] text-dim">
+                    {m.id} · {m.line} · {m.area}
+                  </p>
+                  <div className="mt-1.5"><StatusBadge status={m.status} condition={m.condition} /></div>
+                </div>
+                <Sparkline data={m.series.health.slice(-30)} color={STATUS_COLOR[m.status]} width={70} height={24} />
+              </div>
+              <div className="mt-3">
+                <div className="mb-1 flex justify-between text-[11px] text-dim">
+                  <span>Health</span>
+                  <span>RUL <span className="num text-mute">{m.rul.toFixed(1)} d</span></span>
+                </div>
+                <HealthBar value={m.health} status={m.status} />
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3">
+                <Metric k="temperature" v={m.sensor.temperature} />
+                <Metric k="vibration" v={m.sensor.vibration} />
+                <Metric k="current" v={m.sensor.current} />
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }

@@ -53,7 +53,7 @@ MACHINE_NAMES = {
 # ==========================================
 FIXED_CONDITIONS = {
     "M1": "Healthy", "M2": "Healthy", "M3": "Medium",
-    "M4": "Fail", "M5": "Healthy", "M6": "Fail",
+    "M4": "Healthy", "M5": "Healthy", "M6": "Fail",
     "M7": "Healthy", "M8": "Fail", "M9": "Healthy",
     "M10": "Fail", "M11": "Healthy", "M12": "Healthy",
     "M13": "Healthy", "M14": "Healthy", "M15": "Fail",
@@ -258,3 +258,5 @@ async def ws_data(ws: WebSocket):
 
         await ws.send_text(json.dumps(full_data))
         await asyncio.sleep(2)
+
+       
