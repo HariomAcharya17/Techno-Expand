@@ -89,7 +89,7 @@ function MetricTable({ rows, cols }) {
 const rocData = {
   datasets: [
     {
-      label: `Improved, 7-day horizon (AUC ${V2.rocAuc.toFixed(2)})`,
+      label: `Model v2, 7-day horizon (AUC ${V2.rocAuc.toFixed(2)})`,
       data: V2.roc.map(([x, y]) => ({ x, y })),
       borderColor: "#0b5cad",
       borderWidth: 2,
@@ -143,7 +143,7 @@ export default function CaseStudy() {
         {[
           ["Problem", "Unplanned breakdowns stop production. Fixed-interval servicing wastes parts and labour on machines that are fine. We wanted to warn before a machine fails, using data from IoT sensors."],
           ["Approach", "Sensor nodes send readings to the cloud. A Random Forest model classifies each machine as Healthy, Medium or Fail, and the dashboard turns that into health %, failure risk and remaining useful life."],
-          ["Outcome", "A trained model and a working monitoring dashboard prototype. Evaluation showed the first model's 99.9% accuracy was misleading, so we built a second model that flags 1 in 3 days in the week before a failure, on machines it never saw."],
+          ["Outcome", "A monitoring dashboard and two models. The first model's 99.9% accuracy hid that it caught no failures. Model v2 flagged 10 of 18 failing machines a median 6.5 days before failure, on machines it never saw, and estimates remaining useful life."],
         ].map(([h, p]) => (
           <Panel key={h} title={h}>
             <p className="text-[13px] leading-relaxed text-mute">{p}</p>
@@ -182,7 +182,7 @@ export default function CaseStudy() {
             ["Pre-processing", "StandardScaler fitted on the 9 metrics (metric7 and metric8 turned out to be identical)."],
             ["Model", "RandomForestClassifier: 200 trees, max_features = sqrt, random_state = 42 (scikit-learn)."],
             ["Evaluation", "80/20 random split by row (random_state = 42), as in the original Colab notebook. We re-ran it and added a stricter split where test devices are never seen in training."],
-            ["Serving", "Model and scaler saved with joblib; predict.py loads them and classifies a set of sensor readings. The prototype FastAPI backend streamed simulated machine data (fixed conditions per machine) over a WebSocket to the React dashboard. Connecting the model to the live stream is a next step."],
+            ["Serving", "Model and scaler saved with joblib. The prototype FastAPI backend streamed simulated machine data (fixed conditions per machine) over a WebSocket to the React dashboard. Model v2 (below) replaced this model in the backend."],
           ].map(([h, p], i) => (
             <li key={h} className="flex gap-3">
               <span className="num w-5 shrink-0 text-dim">{i + 1}.</span>
@@ -252,46 +252,64 @@ export default function CaseStudy() {
         </div>
       </Panel>
 
-      <h2 className="mb-2 mt-6 text-base font-semibold">Improved model: failure within the next 7 days</h2>
+      <h2 className="mb-2 mt-6 text-base font-semibold">Model v2: failure within 7 days, health and remaining useful life</h2>
       <Panel pad={false}>
-        <div className="px-4 py-3 text-[13px] leading-relaxed text-mute">
-          Changes: (1) the target became “this device fails within the next 7 days”, which gives a maintenance team time to
-          act; (2) per-device features: day-to-day change, 7-day rolling mean and max, device age; (3) class-balanced
-          Random Forest (300 trees); (4) decision threshold ({V2.threshold.toFixed(2)}) tuned on validation devices, then
-          tested on unseen devices.
-        </div>
+        <ol className="space-y-2 px-4 py-3 text-[13px] leading-relaxed text-mute">
+          <li><span className="font-medium text-ink">Labels from real failures.</span> Target 1: the machine fails within the next {V2.horizonDays} days. Target 2: days until failure, capped at {V2.rulCapDays} (RUL).</li>
+          <li><span className="font-medium text-ink">{V2.features} features from each machine&apos;s history.</span> Change since yesterday, 3/7/14-day rolling mean and max, 7-day variability, running max and drift since the first day. metric8 dropped (copy of metric7).</li>
+          <li><span className="font-medium text-ink">Split by machine.</span> 60% train, 20% validation, 20% test. Test machines are never seen during training; nothing is fitted on test data.</li>
+          <li><span className="font-medium text-ink">Class-weighted {V2.model}</span>, chosen over a Random Forest on validation PR-AUC. Thresholds tuned on validation machines: Warning ≥ {V2.thresholdWarning.toFixed(2)}, Critical ≥ {V2.thresholdCritical.toFixed(2)}.</li>
+          <li><span className="font-medium text-ink">Outputs per machine-day:</span> failure probability, health % (100 − failure %), Healthy / Warning / Critical, and RUL in days.</li>
+        </ol>
+        <p className="border-t border-line px-4 py-2.5 text-xs text-dim">{V2.source}</p>
         <div className="border-t border-line">
           <MetricTable
-            cols={["Original (Fail class)", "Improved (7-day)"]}
+            cols={["Original (Fail class)", `Model v2 (${V2.testMachines} unseen machines)`]}
             rows={[
-              ["Recall", [pct(g.failure.recall, 0), pct(V2.recall, 1)], "Share of real failures caught"],
+              ["Recall", [pct(g.failure.recall, 0), pct(V2.recall, 1)], "Share of pre-failure days flagged"],
               ["Precision", [pct(g.failure.precision, 0), pct(V2.precision, 1)], "Share of alerts that were real"],
-              ["F1 score", [g.failure.f1.toFixed(2), V2.f1.toFixed(2)]],
+              ["F1 score", [g.failure.f1.toFixed(2), V2.f1.toFixed(3)]],
               ["ROC-AUC", [g.failure.rocAuc.toFixed(3), V2.rocAuc.toFixed(3)]],
-              ["PR-AUC", [g.failure.prAuc.toFixed(3), V2.prAuc.toFixed(3)], `Random guess ≈ ${(V2.positives / V2.testRows).toFixed(3)}`],
+              ["PR-AUC", [g.failure.prAuc.toFixed(3), V2.prAuc.toFixed(3)], `Random guess ≈ ${V2.prAucRandom.toFixed(3)}`],
+              ["Balanced accuracy", ["0.500", V2.balancedAccuracy.toFixed(3)]],
             ]}
           />
         </div>
       </Panel>
 
+      <Panel title="What it means for a maintenance team" className="mt-4" pad={false}>
+        <div className="grid grid-cols-2 divide-x divide-y divide-line lg:grid-cols-4 lg:divide-y-0">
+          <Fact label="Failing machines flagged" value={`${V2.machinesCaught} of ${V2.failingMachines}`} note={`${pct(V2.machinesCaught / V2.failingMachines, 0)} before they failed`} />
+          <Fact label="Median warning time" value={`${V2.medianWarningDays} days`} note="before the failure" />
+          <Fact label="False alarms" value={V2.falseAlarmsPer1000.toFixed(1)} note="per 1,000 normal machine-days" />
+          <Fact label="RUL error near failure" value={`${V2.rulMaeNear.toFixed(1)} days`} note={`MAE; always guessing ${V2.rulCapDays} days: ${V2.rulMaeBaseline.toFixed(1)}`} />
+        </div>
+      </Panel>
+
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Panel title="ROC curve, unseen devices">
+        <Panel title="ROC curve, unseen machines">
           <div className="h-80">
             <Line data={rocData} options={rocOptions} />
           </div>
         </Panel>
-        <Panel title="Confusion matrix, improved model">
+        <Panel title="Confusion matrix, model v2">
           <Confusion labels={["No failure", "Failure ≤ 7 d"]} matrix={V2.confusion} />
           <p className="mt-3 text-[13px] leading-relaxed text-mute">
-            {V2.confusion[1][1]} of {V2.positives} pre-failure days flagged, with {V2.confusion[0][1]} false alarms out of{" "}
+            {V2.confusion[1][1]} of {V2.positives} pre-failure days flagged as Critical, with {V2.confusion[0][1]} false alarms out of{" "}
             {n(V2.confusion[0][0] + V2.confusion[0][1])} normal days ({pct(V2.confusion[0][1] / (V2.confusion[0][0] + V2.confusion[0][1]), 1)} false-alarm rate).
+            Accuracy is {pct(V2.accuracy, 1)}, but it says little here because almost every row is “no failure”.
           </p>
-          <div className="mt-4 text-xs text-mute">Most useful features</div>
-          <ul className="num mt-1 grid grid-cols-2 gap-x-4 text-xs text-ink">
-            {V2.importance.slice(0, 6).map(([f]) => (
-              <li key={f}>{f}</li>
+          <div className="mt-4 text-xs text-mute">Most useful signals (permutation importance)</div>
+          <div className="mt-1.5 space-y-1">
+            {V2.importance.slice(0, 6).map(([f, v]) => (
+              <div key={f} className="flex items-center gap-3 text-xs">
+                <span className="num w-40 shrink-0 truncate text-ink">{f}</span>
+                <div className="h-1.5 flex-1 bg-[#e6eaee]">
+                  <div className="h-full bg-accent" style={{ width: `${(v / V2.importance[0][1]) * 100}%` }} />
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </Panel>
       </div>
 
@@ -301,7 +319,7 @@ export default function CaseStudy() {
           <li>Test on machines the model has never seen. Random row splits leak information from the same device.</li>
           <li>Labels must come from real outcomes, such as failures or maintenance logs, not from a threshold on an input feature.</li>
           <li>Trends over time (rolling windows, rate of change) carry more signal than a single day's reading.</li>
-          <li>Next: collect real sensor data from our ESP32 nodes, use maintenance records as labels, and try gradient boosting and survival models to estimate remaining useful life directly.</li>
+          <li>RUL is the weakest part (11 days average error near failure). Next: collect real sensor data from our ESP32 nodes, use maintenance records as labels, and try survival models for remaining useful life.</li>
         </ul>
       </Panel>
     </div>

@@ -14,12 +14,12 @@ const DATASET = {
 };
 
 const MODEL = [
-  ["Algorithm", "Random Forest classifier (scikit-learn)"],
-  ["Trees", "200 estimators, max_features = sqrt, random_state = 42"],
-  ["Pre-processing", "StandardScaler on all 9 input features"],
-  ["Inputs", "metric1 … metric9 (anonymised telemetry counters)"],
-  ["Output classes", "0 = Healthy · 1 = Medium (warning) · 2 = Fail"],
-  ["Dashboard values", "Health %, failure % and RUL are ranges set for each predicted class (simulated), not model probabilities"],
+  ["Model v2", "HistGradientBoosting classifier + regressor (scikit-learn 1.6.1), class-weighted"],
+  ["Targets", "Failure within the next 7 days; remaining useful life in days (capped at 30)"],
+  ["Inputs", "90 features from each machine's history (metric1 … metric9, metric8 dropped)"],
+  ["Outputs", "Failure %, health % (100 − failure %), Healthy / Warning / Critical, RUL days"],
+  ["Test result", "ROC-AUC 0.812 · F1 0.256 · 10 of 18 failing machines flagged, median 6.5 days ahead"],
+  ["Dashboard values", "This demo's live stream is simulated; it does not run the model in the browser"],
 ];
 
 export default function Dataset() {
@@ -65,8 +65,9 @@ export default function Dataset() {
             ))}
           </dl>
           <p className="mt-4 text-xs text-dim">
-            Trained model files: <span className="num">backend/python/model.pkl</span>,{" "}
-            <span className="num">backend/python/scaler.pkl</span> (in the project repository).
+            Model files: <span className="num">backend/python/failure_model.pkl</span>,{" "}
+            <span className="num">backend/python/rul_model.pkl</span>, <span className="num">model_config.json</span>.
+            Training notebook: <span className="num">ml/TechnoExpand_v2_Colab.ipynb</span>.
           </p>
         </Panel>
       </div>

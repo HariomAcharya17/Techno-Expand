@@ -1,11 +1,10 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import json
 import random
-import joblib
-import numpy as np
 import os
+import sys
 from datetime import datetime, timedelta, date
 
 # ==========================================
@@ -21,11 +20,30 @@ app.add_middleware(
 )
 
 # ==========================================
-# MODEL (optional but used)
+# MODEL v2 (failure within 7 days + RUL), trained in ml/TechnoExpand_v2_Colab.ipynb
+# Requires scikit-learn==1.6.1 (see requirements.txt)
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-model = joblib.load(os.path.join(BASE_DIR, "python/model.pkl"))
-scaler = joblib.load(os.path.join(BASE_DIR, "python/scaler.pkl"))
+sys.path.insert(0, os.path.join(BASE_DIR, "python"))
+from features import CONFIG, models, predict_machine  # noqa: E402
+
+models()  # load once at startup
+
+
+@app.get("/model")
+def model_info():
+    """Model settings: thresholds, horizon, RUL cap, scikit-learn version."""
+    return {k: v for k, v in CONFIG.items() if k != "features"}
+
+
+@app.post("/predict")
+def predict(history: list[dict]):
+    """Body: JSON list of one machine's daily readings
+    ({"date", "metric1".."metric9"}). Returns failure %, health %, condition, RUL."""
+    try:
+        return predict_machine(history)
+    except ValueError as err:
+        raise HTTPException(status_code=422, detail=str(err))
 
 # ==========================================
 # MACHINE LIST
