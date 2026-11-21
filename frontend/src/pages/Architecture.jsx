@@ -5,7 +5,7 @@ const PIPELINE = [
   { icon: FiActivity, title: "Sensors", text: "Temperature, pressure, vibration, humidity, current, voltage, speed, load and acoustic level on each machine." },
   { icon: FiCpu, title: "ESP32 edge node", text: "Samples every channel, timestamps readings and checks thresholds locally." },
   { icon: FiRadio, title: "Gateway", text: "Collects data from the nodes over Wi-Fi and forwards it to the cloud." },
-  { icon: FiCloud, title: "Cloud + ML", text: "Backend scales the features and runs the Random Forest model to get the condition class, health % and RUL. In the prototype, predict.py runs the model; the live stream used fixed conditions." },
+  { icon: FiCloud, title: "Cloud + ML", text: "Backend builds 90 trend features per machine and runs model v2 (HistGradientBoosting) to get failure risk, health %, condition and RUL (POST /predict)." },
   { icon: FiMonitor, title: "Dashboard", text: "Live WebSocket stream to this operator console: trends, alarms, maintenance planning." },
 ];
 

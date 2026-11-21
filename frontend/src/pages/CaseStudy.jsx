@@ -313,6 +313,43 @@ export default function CaseStudy() {
         </Panel>
       </div>
 
+      <h2 className="mb-2 mt-6 text-base font-semibold">What is live on this website, and what is in the repository</h2>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title="Live on this website (Vercel)">
+          <ul className="space-y-3 text-[13px] leading-relaxed text-mute">
+            {[
+              ["Dashboard: Overview, Machines, Alerts", "Replays real daily readings of 15 machines from the dataset that model v2 never saw in training (6 that failed, 9 that did not), with the model's failure risk, condition and RUL for every day. Precomputed once, stored in public/replay.json (164 KB)."],
+              ["Failures and false alarms", "Both are real. In this replay, 5 of the 6 failing machines reach Critical 3–7 days before they fail, 1 (W1F1CB5E) is missed, and 1 of the 9 healthy machines (W1F0G9T7) has 8 days of false Critical alerts. The machines were chosen by longest history, not by result; the full test result is 10 of 18 failing machines flagged."],
+              ["Case study and dataset pages", "Every metric comes from the Colab run and was re-checked by loading the saved model files."],
+              ["Illustrative only", "Machine names and photos. Device IDs, readings, dates and predictions are real."],
+            ].map(([h, t]) => (
+              <li key={h}>
+                <span className="font-medium text-ink">{h}.</span> {t}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+        <Panel title="In the repository (not deployed)">
+          <ul className="space-y-2 text-[13px] leading-relaxed text-mute">
+            {[
+              ["ml/TechnoExpand_v2_Colab.ipynb", "Training notebook for model v2 (run in Google Colab)."],
+              ["ml/build_replay.py", "Runs model v2 on the 15 test machines and writes public/replay.json."],
+              ["ml/evaluate_original.py", "Re-evaluates the first model (v1) with proper metrics."],
+              ["backend/python/*.pkl", "failure_model.pkl and rul_model.pkl (scikit-learn 1.6.1), with model_config.json."],
+              ["backend/main.py", "FastAPI: POST /predict (one machine's daily readings → risk, health, condition, RUL), GET /model."],
+              ["backend/python/predict.py", "Same prediction from the command line."],
+              ["Dataset CSV", "Not committed (download from Kaggle)."],
+              ["ESP32 prototype", "Separate hardware demo, not connected to this site."],
+            ].map(([f, t]) => (
+              <li key={f} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <span className="num shrink-0 text-xs text-ink sm:w-52">{f}</span>
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      </div>
+
       <Panel title="Lessons and next steps" className="mt-4">
         <ul className="list-disc space-y-1.5 pl-5 text-[13px] leading-relaxed text-mute">
           <li>On rare-event problems, report recall, precision, F1 and PR-AUC for the rare class. Accuracy hides failure.</li>

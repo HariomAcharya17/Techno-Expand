@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { FiGrid, FiCpu, FiBell, FiDatabase, FiLayers, FiUsers, FiMenu, FiX, FiFileText } from "react-icons/fi";
-import { useTelemetry } from "../sim/engine";
+import { FiGrid, FiCpu, FiBell, FiDatabase, FiLayers, FiUsers, FiMenu, FiX, FiFileText, FiPlay, FiPause } from "react-icons/fi";
+import { useReplay, togglePlay, setSpeed, seek, fmtDay } from "../sim/replay";
 
 const NAV = [
   { group: "Operations", items: [
     { to: "/", label: "Overview", icon: FiGrid, end: true },
-    { to: "/machines", label: "Assets", icon: FiCpu },
-    { to: "/alerts", label: "Alarms", icon: FiBell, badge: true },
+    { to: "/machines", label: "Machines", icon: FiCpu },
+    { to: "/alerts", label: "Alerts", icon: FiBell, badge: true },
   ]},
   { group: "About the project", items: [
     { to: "/case-study", label: "Case study", icon: FiFileText },
@@ -17,25 +17,59 @@ const NAV = [
   ]},
 ];
 
-function Clock() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+const SPEEDS = [1, 5, 20];
+
+function ReplayBar({ r }) {
+  if (r.status === "loading") return <div className="border-b border-line bg-panel px-4 py-2 text-xs text-mute sm:px-6">Loading replay data…</div>;
+  if (r.status === "error")
+    return <div className="border-b border-line bg-panel px-4 py-2 text-xs text-crit sm:px-6">Could not load replay data ({r.error}).</div>;
   return (
-    <span className="num text-xs text-white/70 hidden md:inline">
-      {now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}{" "}
-      {now.toLocaleTimeString("en-GB", { hour12: false })}
-    </span>
+    <div className="sticky top-12 z-20 border-b border-line bg-panel/95 backdrop-blur">
+      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={togglePlay}
+            aria-label={r.playing ? "Pause replay" : "Play replay"}
+            className="flex h-7 w-7 items-center justify-center rounded bg-accent text-white hover:opacity-90"
+          >
+            {r.playing ? <FiPause size={13} /> : <FiPlay size={13} />}
+          </button>
+          <div className="leading-tight">
+            <div className="num text-sm font-medium">{fmtDay(r.day)}</div>
+            <div className="text-[11px] text-dim">Replay · 1 day every {2 / r.speed} s</div>
+          </div>
+        </div>
+        <div className="flex rounded border border-line text-xs">
+          {SPEEDS.map((sp) => (
+            <button
+              key={sp}
+              onClick={() => setSpeed(sp)}
+              className={`num px-2 py-1 ${r.speed === sp ? "bg-accent text-white" : "text-mute hover:text-ink"}`}
+            >
+              {sp}×
+            </button>
+          ))}
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={r.data.endDay}
+          value={r.day}
+          onChange={(e) => seek(Number(e.target.value))}
+          aria-label="Replay date"
+          className="h-1 min-w-[160px] flex-1 accent-[#0b5cad]"
+        />
+        <span className="num hidden text-[11px] text-dim md:inline">01 Jan – {fmtDay(r.data.endDay)}</span>
+      </div>
+    </div>
   );
 }
 
 export default function Layout() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const t = useTelemetry();
-  const unacked = t.alarms.filter((a) => !a.acked && a.severity === "crit").length;
+  const r = useReplay();
+  const unacked = r.data ? r.data.events.filter((e) => e.day <= r.day && e.severity === "crit" && !r.acked.has(e.id)).length : 0;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -71,13 +105,10 @@ export default function Layout() {
           </div>
         ))}
       </div>
-      <div className="border-t border-line px-4 py-3 text-xs">
-        <div className="mb-1.5 text-mute">Edge gateways</div>
-        <div className="num grid grid-cols-2 gap-y-1 text-dim">
-          <span>GW-01, GW-02</span><span className="text-right text-ok">online</span>
-          <span>Latency</span><span className="text-right text-ink">{t.gateway.latency} ms</span>
-          <span>Packets</span><span className="text-right text-ink">{t.gateway.packets.toLocaleString()}</span>
-        </div>
+      <div className="border-t border-line px-4 py-3 text-xs leading-relaxed text-dim">
+        <div className="mb-1 text-mute">Data source</div>
+        Real daily readings of 15 machines from the Kaggle dataset, with predictions from model v2. None of these
+        machines were used in training.
       </div>
     </nav>
   );
@@ -90,11 +121,10 @@ export default function Layout() {
         </button>
         <span className="font-semibold tracking-tight">TechnoExpand</span>
         <span className="hidden sm:inline h-4 w-px bg-white/25" />
-        <span className="hidden sm:inline text-[13px] text-white/75">Plant 01 · Condition monitoring</span>
+        <span className="hidden sm:inline text-[13px] text-white/75">Condition monitoring · model v2 replay</span>
         <div className="ml-auto flex items-center gap-4">
-          <Clock />
           <NavLink to="/dataset" className="text-xs text-white/75 hover:text-white underline-offset-2 hover:underline">
-            Demo data
+            About the data
           </NavLink>
         </div>
       </header>
@@ -108,12 +138,14 @@ export default function Layout() {
       )}
 
       <div className="pt-12 lg:pl-56">
+        <ReplayBar r={r} />
         <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6">
           <Outlet />
         </main>
         <footer className="mx-auto max-w-[1480px] px-4 pb-6 sm:px-6 text-xs text-dim">
-          TechnoExpand, Group 47, LDRP-ITR. Sensor data on this site is simulated in the browser.{" "}
-          <NavLink to="/dataset" className="text-mute underline underline-offset-2 hover:text-ink">Why?</NavLink>
+          TechnoExpand, Group 47, LDRP-ITR. Readings and predictions are real (Kaggle dataset + model v2), replayed
+          day by day. Asset names and photos are illustrative.{" "}
+          <NavLink to="/case-study" className="text-mute underline underline-offset-2 hover:text-ink">Case study</NavLink>
         </footer>
       </div>
     </div>

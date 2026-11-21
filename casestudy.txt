@@ -1,0 +1,334 @@
+TECHNOEXPAND - CASE STUDY NOTES
+IoT-based machine failure prediction, health % and remaining useful life (RUL)
+Group 47, LDRP-ITR. Project lead: Hariom Acharya.
+Live demo: https://machine-prediction-live.vercel.app/
+
+This file explains, in plain words, what is in this project, what each part does,
+which models and settings were used, why, and what results they gave.
+
+
+======================================================================
+1. THE IDEA IN ONE PARAGRAPH
+======================================================================
+Machines in a factory carry IoT sensors. The readings go to the cloud every day.
+A machine learning model looks at each machine's recent readings and answers:
+  - How likely is it that this machine fails in the next 7 days?   (failure risk %)
+  - How healthy is it right now?                                   (health % = 100 - risk)
+  - Is it Healthy, Warning or Critical?                            (condition)
+  - About how many days does it have left?                         (RUL, remaining useful life)
+A web dashboard shows this for every machine, raises alerts, and lets a maintenance
+team plan service before a breakdown instead of after it.
+
+We had no factory hardware, so we used a public dataset of real machine readings.
+
+
+======================================================================
+2. FOLDER STRUCTURE
+======================================================================
+techno-expand/
+  casestudy.txt                 <- this file
+  frontend/                     <- the website (React). This is what Vercel deploys.
+    index.html                  page shell, fonts, title
+    vercel.json                 sends every URL to index.html so page refresh works
+    public/replay.json          REAL data the dashboard replays (164 KB, see section 6)
+    public/machines/*.jpg       machine photos (illustrative only)
+    public/team/*.jpg           team photos
+    src/main.jsx                starts React
+    src/App.jsx                 list of pages (routes)
+    src/index.css               colours, fonts (Tailwind CSS theme)
+    src/sim/replay.js           loads replay.json and plays it back day by day
+    src/components/Layout.jsx   top bar, side menu, replay controls, footer
+    src/components/ui.jsx       small building blocks: Panel, Kpi, StatusBadge, HealthBar, Sparkline
+    src/lib/chart.js            Chart.js setup and shared chart options
+    src/lib/status.js           colours and names for Healthy / Warning / Critical / Failed / No data
+    src/lib/events.js           alert text and RUL formatting helpers
+    src/data/caseStudy.js       all numbers shown on the Case Study page (generated from ml/*.json)
+    src/pages/Dashboard.jsx     Overview page
+    src/pages/Machines.jsx      Machines grid
+    src/pages/MachineDetails.jsx one machine: risk over time, RUL predicted vs actual, metrics, export
+    src/pages/Alerts.jsx        alert list
+    src/pages/CaseStudy.jsx     case study with all metrics and charts
+    src/pages/Dataset.jsx       dataset and model summary
+    src/pages/Architecture.jsx  IoT system design
+    src/pages/OurTeam.jsx       team
+  backend/                      <- Python API (runs on a server or your laptop, NOT on Vercel)
+    main.py                     FastAPI app: POST /predict, GET /model, and the old WebSocket demo stream
+    requirements.txt            Python packages (scikit-learn is pinned to 1.6.1)
+    python/failure_model.pkl    model v2: failure within 7 days (classifier)
+    python/rul_model.pkl        model v2: remaining useful life (regressor)
+    python/model_config.json    feature list, thresholds, settings, scikit-learn version
+    python/features.py          builds the 90 features and runs the two models
+    python/predict.py           same prediction from the command line
+    python/legacy_v1/           the first model (model.pkl, scaler.pkl), kept for history
+  ml/                           <- machine learning work
+    TechnoExpand_v2_Colab.ipynb training notebook for model v2 (run in Google Colab)
+    TechnoExpand_v2_Colab.py    the same notebook as a plain Python file
+    metrics_v2_colab.json       results of the Colab run
+    model_config_v2.json        settings saved by the Colab run
+    build_replay.py             makes frontend/public/replay.json from the model and dataset
+    evaluate_original.py        re-tests the first model (v1) with proper metrics
+    metrics_original.json       results of that re-test
+    README.md                   short version of this ML section
+  The dataset CSV is NOT in the repository (download it from Kaggle, see section 3).
+
+
+======================================================================
+3. DATASET
+======================================================================
+Name:     Predictive Maintenance Dataset
+Author:   Himanshu Agarwal, Kaggle, MIT licence
+Link:     https://www.kaggle.com/datasets/hiimanshuagarwal/predictive-maintenance-dataset
+File:     predictive_maintenance_dataset.csv (6.6 MB)
+Rows:     124,494 (one row = one device on one day)
+Devices:  1,169
+Dates:    1 Jan 2015 to 2 Nov 2015
+Columns:  date, device, failure (0 or 1), metric1 ... metric9
+Failures: 106 rows (0.085%). Only about 1 row in 1,170 is a failure.
+
+Important facts we found:
+  - metric1 ... metric9 are anonymised counters. We do not know what they physically measure,
+    so they have no units.
+  - metric7 and metric8 are exactly the same in every row, so metric8 is dropped.
+  - The data is extremely imbalanced (very few failures). This decides how the model must be
+    trained and how it must be judged (see section 5).
+
+Why the CSV is not on the website: it is too large to ship and process for every visitor on the
+free Vercel plan; when it was bundled the site lagged. The website only ships a small file of
+precomputed results (section 6).
+
+
+======================================================================
+4. THE FIRST MODEL (v1) AND WHAT WAS WRONG WITH IT
+======================================================================
+Notebook: Sem6project.ipynb (first version, written with help from another AI tool)
+What it did:
+  - Made 3 labels: Fail = failure is 1; Medium = the row average of the 9 metrics is above the
+    overall average; Healthy = everything else.
+  - StandardScaler on all rows, then an 80/20 random row split.
+  - RandomForestClassifier(n_estimators=200, max_depth=None, min_samples_split=2,
+    min_samples_leaf=1, random_state=42, n_jobs=-1).
+  - Saved model.pkl and scaler.pkl.
+
+Result it printed: accuracy 0.9990 (99.9%).
+
+Re-test (ml/evaluate_original.py), same pipeline, extra metrics:
+                               Random split    Test machines never seen
+  Accuracy                     0.9990          0.9991
+  Macro F1                     0.666           0.666
+  ROC-AUC (3 classes)          0.923           0.918
+  Fail class precision         0.00            0.00
+  Fail class recall            0.00            0.00
+  Fail class F1                0.00            0.00
+  Fail class ROC-AUC           0.769           0.754
+  Fail class PR-AUC            0.035           0.035
+
+So the 99.9% accuracy hid the real problem: it caught NONE of the 18 failures in the test set.
+
+Why:
+  1. The "Medium" label is not real wear. metric1 is in the hundreds of millions, so the row
+     average is basically metric1. The model learned that rule: 99.6% of its decisions use metric1.
+  2. With 0.085% failures, predicting "no failure" every time already gives 99.9% accuracy.
+  3. Rows of the same device were in both train and test (random row split), so the test was not fair.
+  4. The scaler was fitted on all rows before the split (test data leaked into training).
+  5. No class weights, no tuned threshold, and each day was treated alone (no trends).
+  6. Health % and RUL in the old predict.py were random numbers chosen per class.
+
+
+======================================================================
+5. MODEL v2 - WHAT WAS BUILT AND WHY
+======================================================================
+Notebook: ml/TechnoExpand_v2_Colab.ipynb (run in Google Colab; scikit-learn 1.6.1,
+pandas 2.2.3, numpy 2.4.6). Settings: HORIZON = 7 days, RUL_CAP = 30 days, SEED = 42.
+
+STEP 1 - Targets (labels) from real failures  [Cell 4]
+  fail_within_h = 1 if the device has a recorded failure today or in the next 7 days, else 0.
+      Why 7 days: gives a maintenance team time to act. 818 rows are positive.
+  rul = days until the next failure, capped at 30.
+      Machines with no failure ahead get 30 if their data continues at least 30 more days.
+      Their last 30 days are left out of RUL training, because we cannot know what happened
+      after the data ends ("censored"). 102,672 rows are usable for RUL.
+
+STEP 2 - Features from each machine's own history  [Cell 5, function make_features()]
+  For each of metric1-7 and metric9 (8 metrics):
+      value today, change since yesterday (diff1),
+      rolling mean and rolling max over 3, 7 and 14 days,
+      7-day standard deviation (variability),
+      highest value so far (cummax),
+      drift since the machine's first day (dev_from_first).
+  Plus day_idx (days since the machine's first reading) and record_len_so_far.
+  Total: 90 features. Only past and current days are used, never future ones.
+  Why: one day's reading says little; the trend before a failure says much more.
+
+STEP 3 - Split by machine  [Cell 6, GroupShuffleSplit]
+  60% train (701 machines), 20% validation (234), 20% test (234), random_state=42.
+  A machine is in only one set, so test machines are truly unseen.
+  Test set: 24,904 rows, 18 failing machines, 144 positive rows.
+
+STEP 4 - Two candidate models, keep the better one  [Cell 7]
+  HistGradientBoostingClassifier(learning_rate=0.05, max_iter=400, max_leaf_nodes=31,
+      min_samples_leaf=40, l2_regularization=1.0, class_weight="balanced", random_state=42)
+  RandomForestClassifier(n_estimators=400, min_samples_leaf=5, max_features="sqrt",
+      class_weight="balanced_subsample", n_jobs=-1, random_state=42)
+  class_weight="balanced" makes the rare failure rows count much more during training.
+  The winner is picked on validation PR-AUC (the right score when positives are rare).
+  Winner: HistGradientBoosting (gradient-boosted trees; fast, handles uneven feature scales,
+  so no StandardScaler is needed).
+
+STEP 5 - Two thresholds, tuned on validation machines only  [Cell 8]
+  The model outputs a probability. Two cut-offs turn it into a condition:
+    Critical if risk >= 0.8039  (the cut-off with the best F1 on validation)
+    Warning  if risk >= 0.0795  (the cut-off that catches at least 60% of pre-failure days)
+    Healthy  otherwise
+  Using validation (not test) keeps the final test honest.
+
+STEP 6 - Final test, done once  [Cell 9-11]
+  Retrain on train + validation, keep the thresholds, score the 234 test machines.
+
+STEP 7 - RUL model  [Cell 12]
+  HistGradientBoostingRegressor(learning_rate=0.05, max_iter=400, max_leaf_nodes=31,
+      min_samples_leaf=40, random_state=42)
+  Rows within 30 days of a failure get sample_weight 20 (others 1), otherwise the model would
+  just predict 30 for everything. Predictions are clipped to 0-30 days.
+
+STEP 8 - Save  [Cell 14]
+  failure_model.pkl, rul_model.pkl, model_config.json, metrics.json
+  (backend must use scikit-learn 1.6.1 to load the .pkl files).
+
+STEP 9 - Use  [Cell 15, function predict_machine()]
+  Input: one machine's daily readings (at least ~14 days). Output:
+    failure_prob_pct, health_pct (100 - risk), condition, rul_days.
+
+
+======================================================================
+6. RESULTS OF MODEL v2  (234 test machines never seen in training)
+======================================================================
+Source: ml/metrics_v2_colab.json (Colab run). I re-checked by loading the two .pkl files and
+re-scoring the same test machines: every number matched exactly.
+
+                               Old model (Fail class)   Model v2
+  ROC-AUC                      0.754                    0.812
+  PR-AUC (random guess 0.006)  0.035                    0.178
+  Precision                    0.00                     0.224
+  Recall                       0.00                     0.299
+  F1 score                     0.00                     0.256
+  Balanced accuracy            0.500                    0.646
+  Accuracy                     0.999                    0.990  (not meaningful here, see below)
+  Confusion matrix (v2): 24,611 true "no failure", 149 false alarms, 101 missed, 43 caught days.
+
+For a maintenance team:
+  - 10 of 18 failing machines (56%) were flagged Critical before they failed.
+  - Median warning time: 6.5 days before the failure.
+  - False alarms: 6.0 per 1,000 normal machine-days.
+  - RUL error in the last 30 days before a failure: 11.2 days on average (MAE), RMSE 13.8 days.
+    Always guessing "30 days" would be off by 16.6 days, so the model is better, but RUL is the
+    weakest part.
+
+Most useful signals (permutation importance): metric6 drift since first day, machine age
+(day_idx), 7-day variability of metric2, metric4, metric7, metric7 drift, metric4 drift.
+
+Honest limits: only 106 failures and anonymised metrics. An F1 near 0.9 is not realistic on this
+data; catching more than half of the failing machines about a week early is a solid result.
+
+
+======================================================================
+7. WHAT THE METRICS MEAN
+======================================================================
+Accuracy           share of all rows predicted correctly. Misleading when failures are rare.
+Precision          of all alerts raised, how many were real.
+Recall             of all real pre-failure days, how many were flagged.
+F1 score           one number balancing precision and recall (their harmonic mean).
+ROC-AUC            how well the model ranks risky days above safe ones (0.5 = random, 1 = perfect).
+PR-AUC             like ROC-AUC but focused on the rare class; random guess = share of positives.
+Balanced accuracy  average of recall on each class (0.5 = no better than guessing).
+Confusion matrix   counts of true negatives, false alarms, misses and catches.
+MAE / RMSE         average error in days for RUL (RMSE punishes big errors more).
+
+
+======================================================================
+8. FRONTEND - WHAT THE WEBSITE USES
+======================================================================
+Stack: React 19, Vite 7 (build tool), Tailwind CSS 4 (styling), React Router 7 (pages),
+Chart.js 4 + react-chartjs-2 (charts), react-icons (icons), SheetJS xlsx (Excel export,
+loaded only when you click Export). Fonts: IBM Plex Sans and IBM Plex Mono.
+
+How the live data works (src/sim/replay.js):
+  - On load it fetches /replay.json.
+  - A replay clock moves forward one day every 2 seconds (1x), or faster at 5x / 20x.
+    The bar under the header has play/pause, speed and a date slider (1 Jan - 2 Nov 2015).
+  - For each machine and day it looks up the real reading and the model's prediction
+    (function machineAt()): status, failure risk, health, predicted RUL, actual days to failure.
+  - Alerts are created when a machine moves up to Warning or Critical, and when a failure
+    is recorded in the data.
+  - The browser does NOT run the model. All predictions were computed once by ml/build_replay.py.
+
+Pages:
+  Overview    fleet health trend, status counts, machine table sorted by risk, recent alerts.
+  Machines    cards with health, risk, predicted RUL, last reading date; filter and search.
+  Machine     risk over time with the Warning/Critical lines, predicted vs actual RUL for
+              machines that failed, the 8 metric channels, alert history, Excel export.
+  Alerts      all alerts up to the replay date; acknowledge buttons.
+  Case study  full story with all metrics, ROC curve, confusion matrices, live-vs-repo list.
+  Dataset & model, System architecture, Team.
+
+What is real and what is illustrative:
+  Real:         device IDs, dates, metric readings, failures, every prediction, every metric.
+  Illustrative: machine names (e.g. "CNC Milling Machine") and photos.
+
+
+======================================================================
+9. BACKEND - WHAT THE PYTHON SIDE USES
+======================================================================
+Stack: FastAPI + Uvicorn (web API), scikit-learn 1.6.1, pandas, numpy, joblib.
+Files:
+  backend/python/features.py
+      make_features(data)   builds the same 90 features as the notebook.
+      predict_machine(history) -> {failure_prob_pct, health_pct, condition, rul_days, days_used}
+      models()              loads failure_model.pkl and rul_model.pkl once.
+  backend/main.py
+      POST /predict   body: JSON list of one machine's daily rows
+                      [{"date": "2015-03-01", "metric1": ..., ..., "metric9": ...}, ...]
+      GET  /model     thresholds, horizon, RUL cap, scikit-learn version
+      WS   /ws/data   the original simulated stream from the first prototype (not used by the site now)
+  backend/python/predict.py
+      python predict.py history.json   (or pipe JSON into it)
+
+How to run the backend locally:
+  cd backend
+  pip install -r requirements.txt
+  uvicorn main:app --reload --port 8000
+  Open http://localhost:8000/docs to try /predict.
+
+Tested: three test machines gave the same result through /predict, predict.py and the full-
+dataset calculation (one Critical, one Warning, one Healthy); bad input returns error 422.
+
+
+======================================================================
+10. WHAT IS LIVE AND WHAT IS ONLY IN THE FILES
+======================================================================
+Live on Vercel:
+  - The dashboard replaying real readings + model v2 predictions for 15 test machines
+    (6 that failed, 9 that did not, chosen by longest history, not by result).
+    In this replay 5 of the 6 failing machines reach Critical 3-7 days before failing,
+    1 (W1F1CB5E) is missed, and 1 healthy machine (W1F0G9T7) has 8 days of false Critical alerts.
+  - Case study and dataset pages with the real metrics.
+Only in the repository:
+  - The training notebook, the .pkl model files, the FastAPI backend, build_replay.py.
+  - The dataset CSV is not committed at all (download from Kaggle).
+  - The ESP32 hardware prototype is separate and not connected to the site.
+Why the backend is not on Vercel: Vercel runs short serverless functions (no WebSockets), the
+Python packages are about 290 MB (near the size limit), and the first request would be slow.
+Precomputing the predictions gives the same real numbers instantly and reliably.
+
+
+======================================================================
+11. HOW TO UPDATE EVERYTHING AFTER RETRAINING
+======================================================================
+1. Run ml/TechnoExpand_v2_Colab.ipynb in Colab; download the 4 files.
+2. Copy failure_model.pkl, rul_model.pkl, model_config.json into backend/python/.
+   Copy metrics.json to ml/metrics_v2_colab.json.
+3. With scikit-learn 1.6.1 installed, run:
+      python ml/build_replay.py predictive_maintenance_dataset.csv
+   This rewrites frontend/public/replay.json.
+4. Update frontend/src/data/caseStudy.js with the new metrics, then:
+      cd frontend && npm run build
+5. Commit and push; Vercel redeploys.

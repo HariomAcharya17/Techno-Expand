@@ -19,7 +19,7 @@ const MODEL = [
   ["Inputs", "90 features from each machine's history (metric1 … metric9, metric8 dropped)"],
   ["Outputs", "Failure %, health % (100 − failure %), Healthy / Warning / Critical, RUL days"],
   ["Test result", "ROC-AUC 0.812 · F1 0.256 · 10 of 18 failing machines flagged, median 6.5 days ahead"],
-  ["Dashboard values", "This demo's live stream is simulated; it does not run the model in the browser"],
+  ["Dashboard values", "Real readings + model v2 predictions for 15 unseen test machines, precomputed and replayed day by day"],
 ];
 
 export default function Dataset() {
@@ -80,9 +80,9 @@ export default function Dataset() {
             much data for every visitor.
           </p>
           <p className="text-sm text-mute leading-relaxed">
-            So this public demo leaves the raw dataset out. Instead, the browser runs a lightweight simulator that produces
-            the same kind of live stream the IoT gateway sends: values per machine condition, thresholds, alarms and RUL
-            decay. The trained model stays in the repository.
+            So the site ships only what the dashboard needs: a 164 KB file with the daily readings of 15 machines and the
+            model&apos;s prediction for each day, computed once offline by <span className="num">ml/build_replay.py</span>. The full
+            dataset and the Python backend stay out of the deployment.
           </p>
         </div>
       </Panel>
@@ -90,9 +90,9 @@ export default function Dataset() {
       <Panel title="How this demo works" className="mt-4" action={<FiActivity className="text-dim" size={14} />}>
         <ol className="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
           {[
-            ["Designed system", "ESP32 sensor nodes on each machine send readings through an edge gateway to the cloud, where the model scores them. In our prototype, a FastAPI backend streamed simulated machine data over a WebSocket."],
-            ["This demo", "Real hardware and real plant data were not available, so 15 virtual machines stream simulated readings every 2 seconds, with fixed conditions taken from the model’s classes."],
-            ["Sensor channels", "The dataset’s metrics are anonymised, so the dashboard shows the physical channels a real deployment would log: temperature, pressure, vibration, humidity, current, voltage, speed, load and acoustic level."],
+            ["Designed system", "ESP32 sensor nodes on each machine send readings through an edge gateway to the cloud, where the model scores them. The repository has the FastAPI backend that serves model v2 (POST /predict)."],
+            ["This demo", "No plant hardware was available, so the dashboard replays real data: 15 machines from the dataset that the model never saw in training (6 that failed, 9 that did not), one day every 2 seconds, with model v2’s prediction for each day."],
+            ["Sensor channels", "The dataset’s metrics are anonymised counters (metric1 … metric9) with no units, so the dashboard shows them as they are. Machine names and photos are illustrative; device IDs are the real ones."],
           ].map(([h, p], i) => (
             <li key={h} className="rounded border border-line bg-panel-2 p-4">
               <div className="num text-xs text-accent">0{i + 1}</div>

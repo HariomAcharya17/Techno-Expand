@@ -1,7 +1,4 @@
-import { CONDITION_LABEL } from "../sim/config";
-import { STATUS_COLOR } from "../lib/status";
-
-const STATUS_TEXT = { ok: "Normal", warn: "Warning", crit: "Critical" };
+import { STATUS_COLOR, STATUS_TEXT } from "../lib/status";
 
 export function Panel({ title, action, className = "", children, pad = true }) {
   return (
@@ -17,8 +14,8 @@ export function Panel({ title, action, className = "", children, pad = true }) {
   );
 }
 
-export function StatusBadge({ status, condition }) {
-  const label = condition ? CONDITION_LABEL[condition] : STATUS_TEXT[status];
+export function StatusBadge({ status }) {
+  const label = STATUS_TEXT[status];
   const color = STATUS_COLOR[status];
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap" style={{ color }}>
@@ -79,5 +76,13 @@ export function PageHeader({ title, subtitle, right }) {
       </div>
       {right}
     </div>
+  );
+}
+
+export function ReplayLoading({ r }) {
+  return (
+    <p className="py-16 text-center text-sm text-mute">
+      {r.status === "error" ? `Could not load data: ${r.error}` : "Loading data…"}
+    </p>
   );
 }

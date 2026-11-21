@@ -9,6 +9,7 @@ Dataset: [Predictive Maintenance Dataset](https://www.kaggle.com/datasets/hiiman
   - 90 per-machine time features; split by machine (60/20/20); class-weighted HistGradientBoosting; Warning/Critical thresholds tuned on validation machines.
   - Saves `failure_model.pkl`, `rul_model.pkl`, `model_config.json`, `metrics.json`.
 - `metrics_v2_colab.json`, `model_config_v2.json`: output of the Colab run (scikit-learn 1.6.1). Re-checked by loading the saved .pkl files: every metric reproduced exactly.
+- `build_replay.py <csv>`: runs model v2 on 15 unseen test machines and writes `frontend/public/replay.json`, which the live dashboard replays (needs scikit-learn 1.6.1).
 - The model files are in `backend/python/` and are served by `backend/main.py` (`POST /predict`, `GET /model`) and `backend/python/predict.py`.
 
 Test result on 234 unseen machines: ROC-AUC 0.812, PR-AUC 0.178 (random 0.006), precision 0.224, recall 0.299, F1 0.256; 10 of 18 failing machines flagged, median 6.5 days ahead; 6.0 false alarms per 1,000 normal machine-days; RUL MAE 11.2 days near failure (always guessing 30: 16.6).
